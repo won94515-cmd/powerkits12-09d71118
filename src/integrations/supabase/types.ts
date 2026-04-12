@@ -14,6 +14,293 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          page: string | null
+          referrer: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          page?: string | null
+          referrer?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          page?: string | null
+          referrer?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      brand_settings: {
+        Row: {
+          accent_color: string | null
+          created_at: string
+          font_body: string | null
+          font_heading: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          tagline: string | null
+          updated_at: string
+          user_id: string
+          website_url: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string
+          font_body?: string | null
+          font_heading?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          tagline?: string | null
+          updated_at?: string
+          user_id: string
+          website_url?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string
+          font_body?: string | null
+          font_heading?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          tagline?: string | null
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      content_calendar: {
+        Row: {
+          calendar_date: string
+          content_item_id: string | null
+          created_at: string
+          day_of_week: number | null
+          id: string
+          time_slot: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calendar_date: string
+          content_item_id?: string | null
+          created_at?: string
+          day_of_week?: number | null
+          id?: string
+          time_slot?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calendar_date?: string
+          content_item_id?: string | null
+          created_at?: string
+          day_of_week?: number | null
+          id?: string
+          time_slot?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_calendar_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_items: {
+        Row: {
+          ai_generated: boolean | null
+          body: string | null
+          created_at: string
+          id: string
+          platform: string | null
+          scheduled_at: string | null
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_generated?: boolean | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          platform?: string | null
+          scheduled_at?: string | null
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_generated?: boolean | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          platform?: string | null
+          scheduled_at?: string | null
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      discord_connections: {
+        Row: {
+          created_at: string
+          id: string
+          invite_link: string | null
+          is_active: boolean | null
+          server_id: string | null
+          server_name: string | null
+          updated_at: string
+          user_id: string
+          welcome_channel_id: string | null
+          welcome_message: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invite_link?: string | null
+          is_active?: boolean | null
+          server_id?: string | null
+          server_name?: string | null
+          updated_at?: string
+          user_id: string
+          welcome_channel_id?: string | null
+          welcome_message?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invite_link?: string | null
+          is_active?: boolean | null
+          server_id?: string | null
+          server_name?: string | null
+          updated_at?: string
+          user_id?: string
+          welcome_channel_id?: string | null
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
+      ebooks: {
+        Row: {
+          category: string | null
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          download_count: number | null
+          file_url: string | null
+          id: string
+          is_published: boolean | null
+          pages_count: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          download_count?: number | null
+          file_url?: string | null
+          id?: string
+          is_published?: boolean | null
+          pages_count?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          download_count?: number | null
+          file_url?: string | null
+          id?: string
+          is_published?: boolean | null
+          pages_count?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      media_assets: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          folder: string | null
+          id: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          folder?: string | null
+          id?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          folder?: string | null
+          id?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -48,6 +335,48 @@ export type Database = {
           id?: string
           language?: string | null
           phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_tier: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_tier?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_tier?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
           user_id?: string
         }
