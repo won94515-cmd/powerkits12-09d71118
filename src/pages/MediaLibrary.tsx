@@ -25,52 +25,52 @@ const MediaLibrary = () => {
   const filtered = templates.filter(t => t.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Media Library</h1>
-          <p className="text-muted-foreground mt-1">Templates, assets, and uploads for your studio</p>
+          <h1 className="text-2xl font-bold text-foreground">Media Library</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Templates, assets, and uploads for your studio</p>
         </div>
-        <Button className="gap-2">
+        <Button size="sm" className="gap-1.5">
           <Upload className="w-4 h-4" /> Upload Asset
         </Button>
       </div>
 
-      <Tabs defaultValue="templates" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="templates" className="gap-2"><Image className="w-4 h-4" /> Templates</TabsTrigger>
-          <TabsTrigger value="uploads" className="gap-2"><Folder className="w-4 h-4" /> My Uploads</TabsTrigger>
+      <Tabs defaultValue="templates" className="space-y-5">
+        <TabsList className="h-9">
+          <TabsTrigger value="templates" className="gap-1.5 text-sm"><Image className="w-3.5 h-3.5" /> Templates</TabsTrigger>
+          <TabsTrigger value="uploads" className="gap-1.5 text-sm"><Folder className="w-3.5 h-3.5" /> My Uploads</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="flex gap-3 items-center">
+        <TabsContent value="templates" className="space-y-3">
+          <div className="flex gap-2.5 items-center">
             <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search templates..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder="Search templates..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
             </div>
             <div className="flex border border-border rounded-lg">
-              <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon" className="h-9 w-9" onClick={() => setViewMode("grid")}>
-                <Grid3X3 className="w-4 h-4" />
+              <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setViewMode("grid")}>
+                <Grid3X3 className="w-3.5 h-3.5" />
               </Button>
-              <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" className="h-9 w-9" onClick={() => setViewMode("list")}>
-                <LayoutList className="w-4 h-4" />
+              <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setViewMode("list")}>
+                <LayoutList className="w-3.5 h-3.5" />
               </Button>
             </div>
           </div>
 
           {viewMode === "grid" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {filtered.map((t) => (
-                <Card key={t.id} className="group hover:shadow-md hover:border-primary/50 transition-all cursor-pointer">
+                <Card key={t.id} className="group hover:shadow-md hover:border-primary/40 transition-all cursor-pointer border-border/60 shadow-sm">
                   <CardContent className="p-0">
-                    <div className="h-32 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-lg">
-                      {t.type === "reel" ? <Video className="w-8 h-8 text-muted-foreground" /> : <Image className="w-8 h-8 text-muted-foreground" />}
+                    <div className="h-28 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center rounded-t-lg">
+                      {t.type === "reel" ? <Video className="w-7 h-7 text-muted-foreground" /> : <Image className="w-7 h-7 text-muted-foreground" />}
                     </div>
-                    <div className="p-3 space-y-2">
+                    <div className="p-2.5 space-y-1.5">
                       <p className="text-sm font-medium truncate">{t.name}</p>
                       <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-xs">{t.category}</Badge>
-                        <span className="text-xs text-muted-foreground">{t.format}</span>
+                        <Badge variant="outline" className="text-[10px]">{t.category}</Badge>
+                        <span className="text-[10px] text-muted-foreground">{t.format}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -78,18 +78,18 @@ const MediaLibrary = () => {
               ))}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {filtered.map((t) => (
-                <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    {t.type === "reel" ? <Video className="w-5 h-5 text-muted-foreground" /> : <Image className="w-5 h-5 text-muted-foreground" />}
+                <div key={t.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    {t.type === "reel" ? <Video className="w-4 h-4 text-muted-foreground" /> : <Image className="w-4 h-4 text-muted-foreground" />}
                     <span className="text-sm font-medium">{t.name}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-xs">{t.category}</Badge>
-                    <span className="text-xs text-muted-foreground">{t.format}</span>
-                    <Button variant="ghost" size="sm" onClick={() => toast.success("Downloaded!")}>
-                      <Download className="w-4 h-4" />
+                  <div className="flex items-center gap-2.5">
+                    <Badge variant="outline" className="text-[10px]">{t.category}</Badge>
+                    <span className="text-[10px] text-muted-foreground">{t.format}</span>
+                    <Button variant="ghost" size="sm" className="h-7" onClick={() => toast.success("Downloaded!")}>
+                      <Download className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -99,12 +99,12 @@ const MediaLibrary = () => {
         </TabsContent>
 
         <TabsContent value="uploads">
-          <div className="border-2 border-dashed border-border rounded-xl p-16 text-center">
-            <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold mb-1">Upload your assets</h3>
-            <p className="text-sm text-muted-foreground mb-4">Drag & drop files or click to browse</p>
-            <Button variant="outline" className="gap-2">
-              <Plus className="w-4 h-4" /> Browse Files
+          <div className="border-2 border-dashed border-border rounded-xl p-14 text-center">
+            <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+            <h3 className="font-semibold text-sm mb-1">Upload your assets</h3>
+            <p className="text-xs text-muted-foreground mb-3">Drag & drop files or click to browse</p>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Browse Files
             </Button>
           </div>
         </TabsContent>

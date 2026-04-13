@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -37,69 +36,69 @@ const Help = () => {
   );
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      <div className="text-center space-y-3">
-        <h1 className="text-3xl font-bold text-foreground">Help & Support</h1>
-        <p className="text-muted-foreground max-w-lg mx-auto">Find answers, learn best practices, and get support</p>
-        <div className="relative max-w-md mx-auto">
+    <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-5">
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl font-bold text-foreground">Help & Support</h1>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">Find answers, learn best practices, and get support</p>
+        <div className="relative max-w-sm mx-auto">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search help articles..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Search help articles..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-          <CardContent className="p-5 text-center">
-            <BookOpen className="w-8 h-8 mx-auto text-primary mb-3" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="hover:border-primary/40 transition-colors cursor-pointer border-border/60 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <BookOpen className="w-7 h-7 mx-auto text-primary mb-2" />
             <h3 className="font-semibold text-sm">Documentation</h3>
-            <p className="text-xs text-muted-foreground mt-1">Browse all guides</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Browse all guides</p>
           </CardContent>
         </Card>
-        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-          <CardContent className="p-5 text-center">
-            <MessageSquare className="w-8 h-8 mx-auto text-accent mb-3" />
+        <Card className="hover:border-primary/40 transition-colors cursor-pointer border-border/60 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <MessageSquare className="w-7 h-7 mx-auto text-accent mb-2" />
             <h3 className="font-semibold text-sm">Community</h3>
-            <p className="text-xs text-muted-foreground mt-1">Join our Discord</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Join our Discord</p>
           </CardContent>
         </Card>
-        <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-          <CardContent className="p-5 text-center">
-            <HelpCircle className="w-8 h-8 mx-auto text-warning mb-3" />
+        <Card className="hover:border-primary/40 transition-colors cursor-pointer border-border/60 shadow-sm">
+          <CardContent className="p-4 text-center">
+            <HelpCircle className="w-7 h-7 mx-auto text-warning mb-2" />
             <h3 className="font-semibold text-sm">Contact Support</h3>
-            <p className="text-xs text-muted-foreground mt-1">We're here to help</p>
+            <p className="text-xs text-muted-foreground mt-0.5">We're here to help</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Best Practice Guides</CardTitle>
-          <CardDescription>Step-by-step walkthroughs to get the most from powerKits</CardDescription>
+      <Card className="border-border/60 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Best Practice Guides</CardTitle>
+          <CardDescription className="text-xs">Step-by-step walkthroughs to get the most from powerKits</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {guides.map((guide) => (
-              <div key={guide.title} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <guide.icon className="w-4 h-4 text-primary" />
+              <div key={guide.title} className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <guide.icon className="w-3.5 h-3.5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{guide.title}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <Badge variant="outline" className="text-xs">{guide.category}</Badge>
-                    <span className="text-xs text-muted-foreground">{guide.duration}</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Badge variant="outline" className="text-[10px]">{guide.category}</Badge>
+                    <span className="text-[10px] text-muted-foreground">{guide.duration}</span>
                   </div>
                 </div>
-                <Play className="w-4 h-4 text-muted-foreground shrink-0" />
+                <Play className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Frequently Asked Questions</CardTitle>
+      <Card className="border-border/60 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Frequently Asked Questions</CardTitle>
         </CardHeader>
         <CardContent>
           <Accordion type="single" collapsible className="w-full">
@@ -111,7 +110,7 @@ const Help = () => {
             ))}
           </Accordion>
           {filteredFaqs.length === 0 && (
-            <p className="text-center py-6 text-muted-foreground text-sm">No results found</p>
+            <p className="text-center py-5 text-muted-foreground text-sm">No results found</p>
           )}
         </CardContent>
       </Card>
