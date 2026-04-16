@@ -33,7 +33,7 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -48,8 +48,17 @@ const Auth = () => {
     setLoading(false);
     if (error) {
       toast.error(error.message);
+    } else if (data.user && data.user.identities && data.user.identities.length === 0) {
+      // User already exists — sign them in instead
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        toast.error("Account already exists. Please sign in.");
+      } else {
+        navigate("/dashboard");
+      }
     } else {
-      toast.success("Check your email to confirm your account!");
+      toast.success("Account created successfully!");
+      navigate("/dashboard");
     }
   };
 
