@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +12,25 @@ import { Zap, Mail, Github } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [businessName, setBusinessName] = useState("");
+
+  const oauthRedirectOrigin =
+    window.location.origin.includes("lovableproject.com") ||
+    window.location.origin.includes("id-preview--")
+      ? "https://powerkits12.lovable.app"
+      : window.location.origin;
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [authLoading, navigate, user]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +40,7 @@ const Auth = () => {
     if (error) {
       toast.error(error.message);
     } else {
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }
   };
 
@@ -49,23 +63,22 @@ const Auth = () => {
     if (error) {
       toast.error(error.message);
     } else if (data.user && data.user.identities && data.user.identities.length === 0) {
-      // User already exists — sign them in instead
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
         toast.error("Account already exists. Please sign in.");
       } else {
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }
     } else {
       toast.success("Account created successfully!");
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }
   };
 
   const handleOAuth = async (provider: "google" | "github") => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      options: { redirectTo: oauthRedirectOrigin },
     });
     if (error) toast.error(error.message);
   };
