@@ -1,41 +1,20 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Palette, Calendar, Shield, BarChart3, BookOpen,
-  Image, CreditCard, Zap, ArrowRight, CheckCircle2,
-  Circle, TrendingUp, Users, FileText, MessageSquare,
-  ArrowUpRight, Sparkles, Download
+  Image, ArrowRight, CheckCircle2, Circle,
+  TrendingUp, Users, FileText, ArrowUpRight, Download,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from "recharts";
-
-const weeklyData = [
-  { day: "MON", value: 45 },
-  { day: "TUE", value: 72 },
-  { day: "WED", value: 58 },
-  { day: "THU", value: 88 },
-  { day: "FRI", value: 95 },
-  { day: "SAT", value: 60 },
-  { day: "SUN", value: 42 },
-];
-
-const queueItems = [
-  { platform: "LinkedIn", time: "2:00 PM Today", title: "Maximizing Enterprise Valu...", tags: ["DRAFT", "VIDEO"] },
-  { platform: "Twitter/X", time: "9:00 AM Tomorrow", title: "The 5 Rules of Modern...", tags: ["SCHEDULED", "THREAD"] },
-  { platform: "Instagram", time: "Nov 14, 11:30 AM", title: "Case Study: Architectural...", tags: ["SCHEDULED", "STORIES"] },
-];
-
-const recentCampaigns = [
-  { name: "Retention 2024 Phase 1", channel: "Email & Social", status: "Active", conversion: "4.8%", statusColor: "bg-success/15 text-success" },
-  { name: "Customer Win-back Q4", channel: "Omnichannel", status: "Pending", conversion: "1.2%", statusColor: "bg-warning/15 text-warning" },
-  { name: "Legacy Product Migration", channel: "Direct Mail", status: "Archived", conversion: "9.5%", statusColor: "bg-muted text-muted-foreground" },
-];
 
 const quickLinks = [
   { to: "/branding", icon: Palette, label: "Branding", desc: "Customize your studio brand" },
@@ -46,40 +25,103 @@ const quickLinks = [
   { to: "/media-library", icon: Image, label: "Media Library", desc: "Manage templates & assets" },
 ];
 
-const setupSteps = [
-  { label: "Create your account", done: true },
-  { label: "Set up branding", done: false, to: "/branding" },
-  { label: "Choose a plan", done: false, to: "/plans" },
-  { label: "Connect Discord", done: false, to: "/retention-kit" },
-  { label: "Schedule first content", done: false, to: "/content-calendar" },
-];
+interface DashboardData {
+  contentCount: number;
+  publishedCount: number;
+  scheduledCount: number;
+  mediaCount: number;
+  weeklyEvents: { day: string; value: number }[];
+  recentContent: { id: string; title: string; type: string; status: string; platform: string | null; scheduled_at: string | null }[];
+  hasBranding: boolean;
+  hasDiscord: boolean;
+  hasSubscription: boolean;
+}
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const completedSteps = setupSteps.filter(s => s.done).length;
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DashboardData>({
+    contentCount: 0, publishedCount: 0, scheduledCount: 0, mediaCount: 0,
+    weeklyEvents: [], recentContent: [], hasBranding: false, hasDiscord: false, hasSubscription: false,
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      setLoading(true);
+
+      // Past 7 days
+      const since = new Date();
+      since.setDate(since.getDate() - 6);
+      since.setHours(0, 0, 0, 0);
+
+      const [content, media, events, brand, discord, sub] = await Promise.all([
+        supabase.from("content_items").select("id,title,type,status,platform,scheduled_at,created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("media_assets").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("analytics_events").select("created_at").eq("user_id", user.id).gte("created_at", since.toISOString()),
+        supabase.from("brand_settings").select("id").eq("user_id", user.id).maybeSingle(),
+        supabase.from("discord_connections").select("id").eq("user_id", user.id).maybeSingle(),
+        supabase.from("subscriptions").select("id,status").eq("user_id", user.id).maybeSingle(),
+      ]);
+
+      const items = content.data ?? [];
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const weekly: { day: string; value: number }[] = Array.from({ length: 7 }).map((_, i) => {
+        const d = new Date(since);
+        d.setDate(since.getDate() + i);
+        return { day: days[d.getDay()], value: 0 };
+      });
+      (events.data ?? []).forEach((e) => {
+        const d = new Date(e.created_at);
+        const idx = Math.floor((d.getTime() - since.getTime()) / (1000 * 60 * 60 * 24));
+        if (idx >= 0 && idx < 7) weekly[idx].value += 1;
+      });
+
+      setData({
+        contentCount: items.length,
+        publishedCount: items.filter((i) => i.status === "published").length,
+        scheduledCount: items.filter((i) => i.status === "scheduled").length,
+        mediaCount: media.count ?? 0,
+        weeklyEvents: weekly,
+        recentContent: items.slice(0, 5),
+        hasBranding: !!brand.data,
+        hasDiscord: !!discord.data,
+        hasSubscription: !!sub.data && sub.data.status === "active",
+      });
+      setLoading(false);
+    };
+    load();
+  }, [user]);
+
+  const setupSteps = [
+    { label: "Create your account", done: true },
+    { label: "Set up branding", done: data.hasBranding, to: "/branding" },
+    { label: "Choose a plan", done: data.hasSubscription, to: "/plans" },
+    { label: "Connect Discord", done: data.hasDiscord, to: "/retention-kit" },
+    { label: "Schedule first content", done: data.contentCount > 0, to: "/content-calendar" },
+  ];
+  const completedSteps = setupSteps.filter((s) => s.done).length;
   const progress = (completedSteps / setupSteps.length) * 100;
+  const totalEvents = data.weeklyEvents.reduce((sum, d) => sum + d.value, 0);
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Retention Performance</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Real-time health indicators for Q3 Enterprise campaigns.</p>
+          <h1 className="text-2xl font-bold text-foreground">Studio Performance</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Real-time overview of your content and community.</p>
         </div>
         <Badge className="bg-success/10 text-success border-success/20 gap-1.5 px-3 py-1 text-sm font-medium w-fit">
-          <ArrowUpRight className="w-3.5 h-3.5" /> 12.4% Growth
+          <ArrowUpRight className="w-3.5 h-3.5" /> {totalEvents} events / 7 days
         </Badge>
       </div>
 
-      {/* Stats + Insight */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Stat cards */}
         {[
-          { label: "Active Campaigns", value: "24", sub: "+3 New", icon: FileText },
-          { label: "Retention Rate", value: "98.2%", sub: "Optimal", icon: TrendingUp },
-          { label: "Engagement", value: "12.5k", sub: "+8.2%", icon: Users },
+          { label: "Total Content", value: loading ? "—" : String(data.contentCount), sub: `${data.publishedCount} published`, icon: FileText },
+          { label: "Scheduled", value: loading ? "—" : String(data.scheduledCount), sub: "Upcoming", icon: TrendingUp },
+          { label: "Media Assets", value: loading ? "—" : String(data.mediaCount), sub: "In library", icon: Users },
         ].map((card) => (
           <Card key={card.label} className="border-border shadow-sm">
             <CardContent className="p-5">
@@ -95,45 +137,39 @@ const Dashboard = () => {
           </Card>
         ))}
 
-        {/* Insight Card - dark navy */}
         <Card className="bg-primary text-primary-foreground border-0 shadow-lg">
           <CardContent className="p-5 flex flex-col justify-between h-full">
             <p className="text-[10px] uppercase tracking-wider text-primary-foreground/50 font-semibold">Insight of the Day</p>
             <div className="mt-2">
-              <h3 className="text-base font-bold leading-snug">Churn risk identified in 'Mid-Market' segment.</h3>
+              <h3 className="text-base font-bold leading-snug">
+                {data.contentCount === 0 ? "Create your first piece of content." : `You have ${data.scheduledCount} scheduled posts.`}
+              </h3>
               <p className="text-xs text-primary-foreground/70 mt-2 leading-relaxed">
-                Engagement in the Southeast region has dropped 15% this week. We recommend triggering the "Renewal Loyalty" sequence.
+                {data.contentCount === 0
+                  ? "Use AI to generate weekly content ideas in seconds."
+                  : "Keep momentum — consistent posting drives community growth."}
               </p>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-3 gap-1.5 w-fit text-xs"
-            >
-              Run Auto-Fix <ArrowRight className="w-3 h-3" />
+            <Button variant="secondary" size="sm" className="mt-3 gap-1.5 w-fit text-xs" onClick={() => navigate("/content-calendar")}>
+              Open Calendar <ArrowRight className="w-3 h-3" />
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Social Media Performance + Queue */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <Card className="lg:col-span-2 border-border shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold">Social Media Performance</CardTitle>
-              <div className="flex bg-muted rounded-lg p-0.5">
-                <button className="px-3 py-1 text-xs font-medium rounded-md bg-card shadow-sm text-foreground">7 Days</button>
-                <button className="px-3 py-1 text-xs font-medium text-muted-foreground">30 Days</button>
-              </div>
+              <CardTitle className="text-base font-semibold">Activity (last 7 days)</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={weeklyData} barSize={32}>
+              <BarChart data={data.weeklyEvents} barSize={32}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(210, 20%, 92%)" />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'hsl(210, 12%, 50%)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'hsl(210, 12%, 50%)' }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(210, 12%, 50%)" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(210, 12%, 50%)" }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip />
                 <Bar dataKey="value" fill="hsl(210, 60%, 16%)" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -141,40 +177,37 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Queue */}
         <Card className="border-border shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold">Queue</CardTitle>
-              <button className="text-xs text-muted-foreground hover:text-foreground font-medium">View All</button>
+              <button className="text-xs text-muted-foreground hover:text-foreground font-medium" onClick={() => navigate("/content-calendar")}>View All</button>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {queueItems.map((item, i) => (
-              <div key={i} className="p-3 rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors cursor-pointer">
-                <p className="text-[10px] text-muted-foreground font-medium">{item.platform} • {item.time}</p>
-                <p className="text-sm font-semibold mt-0.5 text-foreground">{item.title}</p>
+            {data.recentContent.length === 0 && !loading && (
+              <p className="text-xs text-muted-foreground py-4 text-center">No content yet. Create your first post.</p>
+            )}
+            {data.recentContent.map((item) => (
+              <div key={item.id} className="p-3 rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors cursor-pointer">
+                <p className="text-[10px] text-muted-foreground font-medium uppercase">{item.platform ?? "platform"} • {item.scheduled_at ? new Date(item.scheduled_at).toLocaleString() : "unscheduled"}</p>
+                <p className="text-sm font-semibold mt-0.5 text-foreground truncate">{item.title}</p>
                 <div className="flex gap-1.5 mt-1.5">
-                  {item.tags.map(tag => (
-                    <Badge key={tag} variant="outline" className="text-[9px] px-1.5 py-0">{tag}</Badge>
-                  ))}
+                  <Badge variant="outline" className="text-[9px] px-1.5 py-0">{item.status.toUpperCase()}</Badge>
+                  <Badge variant="outline" className="text-[9px] px-1.5 py-0">{item.type.toUpperCase()}</Badge>
                 </div>
               </div>
             ))}
-            <div className="p-3 rounded-lg border border-dashed border-border text-center text-muted-foreground hover:border-primary/50 transition-colors cursor-pointer">
-              <p className="text-xs">Drag and drop assets to queue new posts</p>
-            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Campaigns Table */}
       <Card className="border-border shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold">Recent Campaigns</CardTitle>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8">
-              <Download className="w-3.5 h-3.5" /> Download Report
+            <CardTitle className="text-base font-semibold">Recent Content</CardTitle>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" onClick={() => navigate("/content-calendar")}>
+              <Download className="w-3.5 h-3.5" /> Manage
             </Button>
           </div>
         </CardHeader>
@@ -183,27 +216,30 @@ const Dashboard = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Campaign Name</th>
-                  <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Channel</th>
+                  <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Title</th>
+                  <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
+                  <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Platform</th>
                   <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Conversion</th>
-                  <th className="text-left py-2.5 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {recentCampaigns.map((c, i) => (
-                  <tr key={i} className="border-b border-border/50 last:border-0">
+                {data.recentContent.length === 0 && (
+                  <tr><td colSpan={4} className="text-center py-6 text-muted-foreground text-xs">No content yet.</td></tr>
+                )}
+                {data.recentContent.map((c) => (
+                  <tr key={c.id} className="border-b border-border/50 last:border-0">
                     <td className="py-3 px-3 font-medium flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-foreground" />
-                      {c.name}
+                      {c.title}
                     </td>
-                    <td className="py-3 px-3 text-muted-foreground">{c.channel}</td>
+                    <td className="py-3 px-3 text-muted-foreground capitalize">{c.type}</td>
+                    <td className="py-3 px-3 text-muted-foreground capitalize">{c.platform ?? "—"}</td>
                     <td className="py-3 px-3">
-                      <Badge className={`text-xs font-medium ${c.statusColor}`}>{c.status}</Badge>
-                    </td>
-                    <td className="py-3 px-3 font-semibold">{c.conversion}</td>
-                    <td className="py-3 px-3">
-                      <Button variant="ghost" size="sm" className="text-xs h-7">•••</Button>
+                      <Badge className={`text-xs font-medium ${
+                        c.status === "published" ? "bg-success/15 text-success" :
+                        c.status === "scheduled" ? "bg-primary/15 text-primary" :
+                        "bg-muted text-muted-foreground"
+                      }`}>{c.status}</Badge>
                     </td>
                   </tr>
                 ))}
@@ -213,7 +249,6 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Setup Wizard */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <Card className="lg:col-span-2 border-border shadow-sm">
           <CardHeader className="pb-3">
@@ -232,11 +267,7 @@ const Dashboard = () => {
                 }`}
                 onClick={() => !step.done && step.to && navigate(step.to)}
               >
-                {step.done ? (
-                  <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-                ) : (
-                  <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
-                )}
+                {step.done ? <CheckCircle2 className="w-4 h-4 text-success shrink-0" /> : <Circle className="w-4 h-4 text-muted-foreground shrink-0" />}
                 <span className={`text-sm font-medium flex-1 ${step.done ? "line-through text-muted-foreground" : ""}`}>
                   {step.label}
                 </span>
@@ -246,7 +277,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
         <Card className="border-border shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
@@ -270,16 +300,6 @@ const Dashboard = () => {
             ))}
           </CardContent>
         </Card>
-      </div>
-
-      {/* Footer */}
-      <div className="text-center py-4 border-t border-border">
-        <p className="text-xs text-muted-foreground">© 2024 powerKits. All systems operational.</p>
-        <div className="flex items-center justify-center gap-4 mt-1.5">
-          <a href="#" className="text-xs text-muted-foreground hover:text-foreground">Privacy</a>
-          <a href="#" className="text-xs text-muted-foreground hover:text-foreground">Terms</a>
-          <a href="#" className="text-xs text-muted-foreground hover:text-foreground">API Status</a>
-        </div>
       </div>
     </div>
   );
