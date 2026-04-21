@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -7,30 +7,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getOAuthBootstrapUrl, getOAuthRedirectUrl, isOAuthProvider, type OAuthProvider } from "@/lib/oauth";
 import { toast } from "sonner";
 import { Zap, Mail, Github } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OAuthProvider | null>(null);
+  const [oauthBootstrapped, setOauthBootstrapped] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [businessName, setBusinessName] = useState("");
 
-  const oauthRedirectOrigin =
-    window.location.origin.includes("lovableproject.com") ||
-    window.location.origin.includes("id-preview--")
-      ? "https://powerkits12.lovable.app"
-      : window.location.origin;
-
   useEffect(() => {
     if (!authLoading && user) {
       navigate("/dashboard", { replace: true });
     }
   }, [authLoading, navigate, user]);
+
+  useEffect(() => {
+    if (authLoading || user || oauthBootstrapped) return;
+
+    const provider = searchParams.get("oauth_provider");
+    if (!isOAuthProvider(provider)) return;
+
+    setOauthBootstrapped(true);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("oauth_provider");
+      return next;
+    }, { replace: true });
+
+    void handleOAuth(provider);
+  }, [authLoading, oauthBootstrapped, searchParams, setSearchParams, user]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,11 +89,19 @@ const Auth = () => {
     }
   };
 
-  const handleOAuth = async (provider: "google" | "github") => {
+  const handleOAuth = async (provider: OAuthProvider) => {
+    const bootstrapUrl = getOAuthBootstrapUrl(provider);
+    if (bootstrapUrl) {
+      window.location.replace(bootstrapUrl);
+      return;
+    }
+
+    setOauthLoadingProvider(provider);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: oauthRedirectOrigin },
+      options: { redirectTo: getOAuthRedirectUrl() },
     });
+    setOauthLoadingProvider(null);
     if (error) toast.error(error.message);
   };
 
@@ -132,13 +154,13 @@ const Auth = () => {
               <CardContent className="p-5 space-y-4">
                 {/* OAuth */}
                 <div className="grid grid-cols-2 gap-2.5">
-                  <Button variant="outline" onClick={() => handleOAuth("google")} type="button" className="w-full h-10 text-sm">
+                  <Button variant="outline" onClick={() => handleOAuth("google")} type="button" className="w-full h-10 text-sm" disabled={loading || oauthLoadingProvider !== null}>
                     <Mail className="w-4 h-4 mr-2" />
-                    Google
+                    {oauthLoadingProvider === "google" ? "Opening…" : "Google"}
                   </Button>
-                  <Button variant="outline" onClick={() => handleOAuth("github")} type="button" className="w-full h-10 text-sm">
+                  <Button variant="outline" onClick={() => handleOAuth("github")} type="button" className="w-full h-10 text-sm" disabled={loading || oauthLoadingProvider !== null}>
                     <Github className="w-4 h-4 mr-2" />
-                    GitHub
+                    {oauthLoadingProvider === "github" ? "Opening…" : "GitHub"}
                   </Button>
                 </div>
 
