@@ -1,60 +1,160 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Link2, Hash, MessageSquare, Send, Users, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
+import {
+  Shield, Hash, MessageSquare, Send, Users, CheckCircle2, AlertCircle,
+  Sparkles, RefreshCw, LogOut, Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { buildDiscordOAuthUrl } from "@/lib/discord";
 
-const mockChannels = [
-  { id: "general", name: "general" },
-  { id: "announcements", name: "announcements" },
-  { id: "challenges", name: "challenges" },
-  { id: "motivation", name: "motivation" },
-  { id: "nutrition", name: "nutrition" },
-];
+interface DiscordChannel { id: string; name: string; }
+interface DiscordConnection {
+  server_id: string | null;
+  server_name: string | null;
+  guild_icon: string | null;
+  bot_installed: boolean | null;
+  is_active: boolean | null;
+  welcome_channel_id: string | null;
+  selected_channel_name: string | null;
+  welcome_message: string | null;
+  channels_cache: DiscordChannel[] | null;
+}
+
+const DEFAULT_WELCOME =
+  "🎉 Welcome to our fitness community! We're thrilled to have you here.\n\n💪 Daily motivation, workout challenges, and a supportive community.\n\nIntroduce yourself in #general!";
 
 const RetentionKit = () => {
-  const [inviteLink, setInviteLink] = useState("");
-  const [connected, setConnected] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState("");
-  const [welcomeMessage, setWelcomeMessage] = useState(
-    "🎉 Welcome to our fitness community! We're thrilled to have you here.\n\n💪 Here you'll find daily motivation, workout challenges, and a supportive community of fitness enthusiasts.\n\nGet started by introducing yourself in #general!"
-  );
+  const { user } = useAuth();
+  const [conn, setConn] = useState<DiscordConnection | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [channels, setChannels] = useState<DiscordChannel[]>([]);
+  const [refreshingChannels, setRefreshingChannels] = useState(false);
+  const [welcomeMessage, setWelcomeMessage] = useState(DEFAULT_WELCOME);
+  const [selectedChannel, setSelectedChannel] = useState<string>("");
+  const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const connected = !!conn?.bot_installed && !!conn?.server_id;
+
+  const loadConnection = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from("discord_connections")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (data) {
+      setConn(data as any);
+      setChannels(((data as any).channels_cache as DiscordChannel[]) || []);
+      setSelectedChannel(data.welcome_channel_id || "");
+      setWelcomeMessage(data.welcome_message || DEFAULT_WELCOME);
+    } else {
+      setConn(null);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadConnection(); }, [user]);
 
   const handleConnect = () => {
-    if (!inviteLink.includes("discord")) {
-      toast.error("Please enter a valid Discord invite link");
-      return;
-    }
-    setConnected(true);
-    toast.success("Discord server connected successfully!");
+    const redirectUri = `${window.location.origin}/discord/callback`;
+    window.location.href = buildDiscordOAuthUrl(redirectUri);
   };
 
-  const handleSendWelcome = () => {
-    if (!selectedChannel) {
-      toast.error("Please select a channel first");
-      return;
+  const handleRefreshChannels = async () => {
+    setRefreshingChannels(true);
+    const { data, error } = await supabase.functions.invoke("discord-list-channels");
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Failed to load channels");
+    } else {
+      setChannels((data as any).channels || []);
+      toast.success(`Loaded ${(data as any).channels?.length || 0} channels`);
     }
-    toast.success(`Welcome message will be sent to #${selectedChannel}`);
+    setRefreshingChannels(false);
   };
+
+  // Auto-load channels first time after connecting
+  useEffect(() => {
+    if (connected && channels.length === 0 && !refreshingChannels) {
+      handleRefreshChannels();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected]);
+
+  const handleSaveSettings = async () => {
+    if (!user) return;
+    setSaving(true);
+    const channelName = channels.find((c) => c.id === selectedChannel)?.name || null;
+    const { error } = await supabase
+      .from("discord_connections")
+      .update({
+        welcome_channel_id: selectedChannel || null,
+        selected_channel_name: channelName,
+        welcome_message: welcomeMessage,
+      })
+      .eq("user_id", user.id);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else { toast.success("Saved"); loadConnection(); }
+  };
+
+  const handleSendWelcome = async () => {
+    if (!selectedChannel) return toast.error("Select a channel first");
+    setSending(true);
+    const { data, error } = await supabase.functions.invoke("discord-send-message", {
+      body: { channel_id: selectedChannel, message: welcomeMessage },
+    });
+    setSending(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Failed to send");
+    } else {
+      toast.success("Message sent to Discord!");
+    }
+  };
+
+  const handleDisconnect = async () => {
+    const { error } = await supabase.functions.invoke("discord-disconnect");
+    if (error) toast.error(error.message);
+    else { toast.success("Disconnected"); setConn(null); setChannels([]); setSelectedChannel(""); }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Retention Kit</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Build and manage your Discord community engagement</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Build and manage your Discord community engagement
+        </p>
       </div>
 
       <Tabs defaultValue="connect" className="space-y-5">
         <TabsList className="h-9">
-          <TabsTrigger value="connect" className="gap-1.5 text-sm"><Link2 className="w-3.5 h-3.5" /> Connect</TabsTrigger>
-          <TabsTrigger value="welcome" className="gap-1.5 text-sm"><MessageSquare className="w-3.5 h-3.5" /> Welcome Message</TabsTrigger>
-          <TabsTrigger value="overview" className="gap-1.5 text-sm"><Users className="w-3.5 h-3.5" /> Overview</TabsTrigger>
+          <TabsTrigger value="connect" className="gap-1.5 text-sm">
+            <Shield className="w-3.5 h-3.5" /> Connect
+          </TabsTrigger>
+          <TabsTrigger value="welcome" className="gap-1.5 text-sm" disabled={!connected}>
+            <MessageSquare className="w-3.5 h-3.5" /> Welcome Message
+          </TabsTrigger>
+          <TabsTrigger value="overview" className="gap-1.5 text-sm">
+            <Users className="w-3.5 h-3.5" /> Overview
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="connect" className="space-y-5">
@@ -62,42 +162,83 @@ const RetentionKit = () => {
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Shield className="w-4 h-4 text-primary" />
-                  Discord Connection
+                  <Shield className="w-4 h-4 text-primary" /> Discord Connection
                 </CardTitle>
-                <CardDescription className="text-xs">Connect your Discord server to start building community</CardDescription>
+                <CardDescription className="text-xs">
+                  Install the powerKits bot into your Discord server
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-sm">Server Invite Link</Label>
-                  <div className="flex gap-2">
-                    <Input placeholder="https://discord.gg/your-server" value={inviteLink} onChange={(e) => setInviteLink(e.target.value)} disabled={connected} className="h-9" />
-                    <Button onClick={handleConnect} disabled={connected || !inviteLink} size="sm">
-                      {connected ? "Connected" : "Connect"}
+                {!connected ? (
+                  <>
+                    <div className="p-4 rounded-lg bg-muted/40 border border-border/60 space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Click below to authorize. You'll choose which Discord
+                        server to install the powerKits bot into. You need the
+                        <strong> Manage Server</strong> permission on that server.
+                      </p>
+                    </div>
+                    <Button onClick={handleConnect} className="w-full gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white">
+                      <Shield className="w-4 h-4" /> Connect with Discord
                     </Button>
-                  </div>
-                </div>
-                <div className={`flex items-center gap-2 p-2.5 rounded-lg text-sm ${connected ? "bg-success/10" : "bg-muted"}`}>
-                  {connected ? (
-                    <><CheckCircle2 className="w-4 h-4 text-success" /><span className="font-medium text-success">Server connected</span></>
-                  ) : (
-                    <><AlertCircle className="w-4 h-4 text-muted-foreground" /><span className="text-muted-foreground">Not connected</span></>
-                  )}
-                </div>
-                {connected && (
-                  <div className="space-y-1.5">
-                    <Label className="text-sm">Default Channel</Label>
-                    <Select value={selectedChannel} onValueChange={setSelectedChannel}>
-                      <SelectTrigger className="h-9"><SelectValue placeholder="Select a channel" /></SelectTrigger>
-                      <SelectContent>
-                        {mockChannels.map((ch) => (
-                          <SelectItem key={ch.id} value={ch.id}>
-                            <span className="flex items-center gap-2"><Hash className="w-3 h-3" /> {ch.name}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg text-sm bg-muted">
+                      <AlertCircle className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Not connected</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-success/10 border border-success/20">
+                      {conn?.guild_icon && conn?.server_id ? (
+                        <img
+                          src={`https://cdn.discordapp.com/icons/${conn.server_id}/${conn.guild_icon}.png?size=64`}
+                          alt={conn.server_name || "server"}
+                          className="w-10 h-10 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+                          <CheckCircle2 className="w-5 h-5 text-success" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold">{conn?.server_name}</div>
+                        <div className="text-xs text-success">Bot installed & connected</div>
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={handleDisconnect} className="gap-1.5">
+                        <LogOut className="w-3.5 h-3.5" /> Disconnect
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm">Default Channel</Label>
+                        <Button
+                          variant="ghost" size="sm" onClick={handleRefreshChannels}
+                          disabled={refreshingChannels} className="h-7 gap-1.5 text-xs"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${refreshingChannels ? "animate-spin" : ""}`} />
+                          Refresh
+                        </Button>
+                      </div>
+                      <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={channels.length ? "Select a channel" : "Loading channels…"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {channels.map((ch) => (
+                            <SelectItem key={ch.id} value={ch.id}>
+                              <span className="flex items-center gap-2">
+                                <Hash className="w-3 h-3" /> {ch.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button onClick={handleSaveSettings} disabled={saving} size="sm" className="w-full mt-2">
+                        {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save Settings"}
+                      </Button>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -109,11 +250,11 @@ const RetentionKit = () => {
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { step: 1, text: "Create a Discord server for your studio", done: connected },
-                    { step: 2, text: "Generate an invite link with no expiration", done: connected },
-                    { step: 3, text: "Paste the link and connect", done: connected },
-                    { step: 4, text: "Select your default channel", done: !!selectedChannel },
-                    { step: 5, text: "Customize your welcome message", done: false },
+                    { step: 1, text: "Click 'Connect with Discord' above", done: connected },
+                    { step: 2, text: "Choose your server in Discord's popup", done: connected },
+                    { step: 3, text: "Authorize the powerKits bot", done: connected },
+                    { step: 4, text: "Select a default channel", done: !!selectedChannel },
+                    { step: 5, text: "Customize your welcome message", done: !!conn?.welcome_message && conn.welcome_message !== DEFAULT_WELCOME },
                   ].map((s) => (
                     <div key={s.step} className="flex items-center gap-3">
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
@@ -121,7 +262,9 @@ const RetentionKit = () => {
                       }`}>
                         {s.done ? "✓" : s.step}
                       </div>
-                      <span className={`text-sm ${s.done ? "line-through text-muted-foreground" : ""}`}>{s.text}</span>
+                      <span className={`text-sm ${s.done ? "line-through text-muted-foreground" : ""}`}>
+                        {s.text}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -135,20 +278,33 @@ const RetentionKit = () => {
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Welcome Message</CardTitle>
-                <CardDescription className="text-xs">This message is sent when new members join your server</CardDescription>
+                <CardDescription className="text-xs">
+                  Sent to <span className="font-mono">#{channels.find(c => c.id === selectedChannel)?.name || "—"}</span>
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Textarea value={welcomeMessage} onChange={(e) => setWelcomeMessage(e.target.value)} rows={7} />
+                <Textarea
+                  value={welcomeMessage}
+                  onChange={(e) => setWelcomeMessage(e.target.value)}
+                  rows={7}
+                  maxLength={2000}
+                />
+                <div className="text-xs text-muted-foreground text-right">{welcomeMessage.length}/2000</div>
                 <div className="flex gap-2">
-                  <Button onClick={handleSendWelcome} size="sm" className="gap-1.5">
-                    <Send className="w-3.5 h-3.5" /> Send Test
+                  <Button onClick={handleSaveSettings} disabled={saving} variant="outline" size="sm">
+                    {saving ? "Saving…" : "Save"}
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-1.5">
+                  <Button onClick={handleSendWelcome} disabled={sending || !selectedChannel} size="sm" className="gap-1.5">
+                    {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    Send Now
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-1.5" disabled>
                     <Sparkles className="w-3.5 h-3.5" /> AI Generate
                   </Button>
                 </div>
               </CardContent>
             </Card>
+
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Preview</CardTitle>
@@ -177,17 +333,17 @@ const RetentionKit = () => {
         <TabsContent value="overview">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
-              { label: "Total Members", value: "0", icon: Users },
-              { label: "Active This Week", value: "0", icon: MessageSquare },
-              { label: "Messages Today", value: "0", icon: Hash },
+              { label: "Server", value: conn?.server_name || "—", icon: Shield },
+              { label: "Channels Available", value: String(channels.length), icon: Hash },
+              { label: "Default Channel", value: conn?.selected_channel_name ? `#${conn.selected_channel_name}` : "—", icon: MessageSquare },
             ].map((stat) => (
               <Card key={stat.label} className="border-border/60 shadow-sm">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                     <stat.icon className="w-4 h-4 text-primary" />
                   </div>
-                  <div>
-                    <p className="text-xl font-bold">{stat.value}</p>
+                  <div className="min-w-0">
+                    <p className="text-base font-bold truncate">{stat.value}</p>
                     <p className="text-xs text-muted-foreground">{stat.label}</p>
                   </div>
                 </CardContent>

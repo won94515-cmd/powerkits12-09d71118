@@ -19,6 +19,7 @@ import MediaLibrary from "@/pages/MediaLibrary";
 import Analytics from "@/pages/Analytics";
 import Help from "@/pages/Help";
 import NotFound from "@/pages/NotFound";
+import DiscordCallback from "@/pages/DiscordCallback";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/discord/callback" element={<DiscordCallback />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route
               element={
