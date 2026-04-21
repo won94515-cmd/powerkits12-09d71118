@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Palette, Upload, Type, MessageSquare, Save } from "lucide-react";
+import { Palette, Upload, Type, MessageSquare, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const colorPresets = [
   { name: "Ocean Blue", primary: "#0062FF", secondary: "#1B263B", accent: "#00897B" },
@@ -18,10 +20,10 @@ const colorPresets = [
 ];
 
 const fontOptions = [
-  { value: "inter", label: "Inter", style: "Clean & Modern" },
-  { value: "poppins", label: "Poppins", style: "Friendly & Round" },
-  { value: "montserrat", label: "Montserrat", style: "Bold & Strong" },
-  { value: "playfair", label: "Playfair Display", style: "Elegant & Classic" },
+  { value: "Inter", label: "Inter", style: "Clean & Modern" },
+  { value: "Poppins", label: "Poppins", style: "Friendly & Round" },
+  { value: "Montserrat", label: "Montserrat", style: "Bold & Strong" },
+  { value: "Playfair Display", label: "Playfair Display", style: "Elegant & Classic" },
 ];
 
 const voiceTones = [
@@ -32,20 +34,95 @@ const voiceTones = [
 ];
 
 const Branding = () => {
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#0062FF");
   const [secondaryColor, setSecondaryColor] = useState("#1B263B");
   const [accentColor, setAccentColor] = useState("#00897B");
-  const [headingFont, setHeadingFont] = useState("inter");
-  const [bodyFont, setBodyFont] = useState("inter");
+  const [headingFont, setHeadingFont] = useState("Inter");
+  const [bodyFont, setBodyFont] = useState("Inter");
   const [brandVoice, setBrandVoice] = useState("motivational");
   const [studioName, setStudioName] = useState("");
   const [tagline, setTagline] = useState("");
-  const [brandDescription, setBrandDescription] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
 
-  const handleSave = () => {
-    toast.success("Brand settings saved! These will apply across all your content.");
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("brand_settings").select("*").eq("user_id", user.id).maybeSingle();
+      if (data) {
+        setLogoUrl(data.logo_url || "");
+        setPrimaryColor(data.primary_color || "#0062FF");
+        setSecondaryColor(data.secondary_color || "#1B263B");
+        setAccentColor(data.accent_color || "#00897B");
+        setHeadingFont(data.font_heading || "Inter");
+        setBodyFont(data.font_body || "Inter");
+        setTagline(data.tagline || "");
+        setWebsiteUrl(data.website_url || "");
+      }
+      const { data: profile } = await supabase.from("profiles").select("business_name").eq("user_id", user.id).maybeSingle();
+      if (profile?.business_name) setStudioName(profile.business_name);
+      setLoading(false);
+    })();
+  }, [user]);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("logos").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("logos").getPublicUrl(path);
+      setLogoUrl(publicUrl);
+      toast.success("Logo uploaded");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const payload = {
+        user_id: user.id,
+        logo_url: logoUrl || null,
+        primary_color: primaryColor,
+        secondary_color: secondaryColor,
+        accent_color: accentColor,
+        font_heading: headingFont,
+        font_body: bodyFont,
+        tagline: tagline || null,
+        website_url: websiteUrl || null,
+      };
+      const { data: existing } = await supabase.from("brand_settings").select("id").eq("user_id", user.id).maybeSingle();
+      const { error } = existing
+        ? await supabase.from("brand_settings").update(payload).eq("user_id", user.id)
+        : await supabase.from("brand_settings").insert(payload);
+      if (error) throw error;
+      if (studioName) {
+        await supabase.from("profiles").update({ business_name: studioName }).eq("user_id", user.id);
+      }
+      toast.success("Brand settings saved");
+    } catch (err: any) {
+      toast.error(err.message || "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-6 flex items-center justify-center min-h-[60vh]"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-5">
@@ -54,8 +131,8 @@ const Branding = () => {
           <h1 className="text-2xl font-bold text-foreground">Branding & Customization</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Define your studio's visual identity and voice</p>
         </div>
-        <Button onClick={handleSave} size="sm" className="gap-1.5">
-          <Save className="w-4 h-4" /> Save Changes
+        <Button onClick={handleSave} size="sm" className="gap-1.5" disabled={saving}>
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Changes
         </Button>
       </div>
 
@@ -84,8 +161,8 @@ const Branding = () => {
                   <Input placeholder="Your journey starts here" value={tagline} onChange={(e) => setTagline(e.target.value)} className="h-9" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Brand Description</Label>
-                  <Textarea placeholder="Describe your studio's mission and values..." value={brandDescription} onChange={(e) => setBrandDescription(e.target.value)} rows={3} />
+                  <Label className="text-sm">Website URL</Label>
+                  <Input placeholder="https://yourstudio.com" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="h-9" />
                 </div>
               </CardContent>
             </Card>
@@ -96,8 +173,14 @@ const Branding = () => {
                 <CardDescription className="text-xs">Upload your studio logo (PNG, SVG recommended)</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                  {logoUrl ? (
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                >
+                  {uploading ? (
+                    <Loader2 className="w-8 h-8 mx-auto animate-spin text-muted-foreground" />
+                  ) : logoUrl ? (
                     <img src={logoUrl} alt="Logo" className="max-h-32 mx-auto" />
                   ) : (
                     <div className="space-y-2">
