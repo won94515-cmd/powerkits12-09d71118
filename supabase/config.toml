@@ -5,3 +5,15 @@ verify_jwt = true
 
 [functions.seo-suggest]
 verify_jwt = true
+
+[functions.discord-oauth-callback]
+verify_jwt = true
+
+[functions.discord-list-channels]
+verify_jwt = true
+
+[functions.discord-send-message]
+verify_jwt = true
+
+[functions.discord-disconnect]
+verify_jwt = true

@@ -177,10 +177,15 @@ export type Database = {
       }
       discord_connections: {
         Row: {
+          bot_installed: boolean | null
+          channels_cache: Json | null
+          channels_cached_at: string | null
           created_at: string
+          guild_icon: string | null
           id: string
           invite_link: string | null
           is_active: boolean | null
+          selected_channel_name: string | null
           server_id: string | null
           server_name: string | null
           updated_at: string
@@ -189,10 +194,15 @@ export type Database = {
           welcome_message: string | null
         }
         Insert: {
+          bot_installed?: boolean | null
+          channels_cache?: Json | null
+          channels_cached_at?: string | null
           created_at?: string
+          guild_icon?: string | null
           id?: string
           invite_link?: string | null
           is_active?: boolean | null
+          selected_channel_name?: string | null
           server_id?: string | null
           server_name?: string | null
           updated_at?: string
@@ -201,10 +211,15 @@ export type Database = {
           welcome_message?: string | null
         }
         Update: {
+          bot_installed?: boolean | null
+          channels_cache?: Json | null
+          channels_cached_at?: string | null
           created_at?: string
+          guild_icon?: string | null
           id?: string
           invite_link?: string | null
           is_active?: boolean | null
+          selected_channel_name?: string | null
           server_id?: string | null
           server_name?: string | null
           updated_at?: string
