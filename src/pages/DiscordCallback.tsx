@@ -35,13 +35,21 @@ const DiscordCallback = () => {
       const { data, error: invokeErr } = await supabase.functions.invoke("discord-oauth-callback", {
         body: { code, redirect_uri },
       });
-      if (invokeErr || (data as any)?.error) {
+      const payload = data as any;
+      if (invokeErr || payload?.ok === false || payload?.error) {
         setStatus("error");
-        setMessage((data as any)?.error || invokeErr?.message || "Failed to connect.");
+        const detailMsg =
+          payload?.details?.error_description ||
+          payload?.details?.error ||
+          payload?.error ||
+          invokeErr?.message ||
+          "Failed to connect.";
+        setMessage(detailMsg);
+        console.error("Discord OAuth error:", { invokeErr, payload });
         return;
       }
       setStatus("success");
-      setMessage(`Connected to ${(data as any)?.guild?.name ?? "your server"}!`);
+      setMessage(`Connected to ${payload?.guild?.name ?? "your server"}!`);
       setTimeout(() => navigate("/retention-kit"), 1500);
     })();
   }, [params, navigate]);
