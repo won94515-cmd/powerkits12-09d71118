@@ -62,9 +62,13 @@ Deno.serve(async (req) => {
 
     const tokenData = await tokenRes.json();
     if (!tokenRes.ok) {
-      console.error("Token exchange failed:", tokenData);
-      return new Response(JSON.stringify({ error: "Token exchange failed", details: tokenData }), {
-        status: 400,
+      console.error("Token exchange failed:", tokenRes.status, JSON.stringify(tokenData));
+      const msg =
+        tokenData?.error_description ||
+        tokenData?.error ||
+        "Token exchange failed (check Client ID/Secret and that the redirect URI is registered in Discord)";
+      return new Response(JSON.stringify({ ok: false, error: msg, details: tokenData, redirect_uri }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -72,10 +76,11 @@ Deno.serve(async (req) => {
     // Discord returns the guild the bot was added to
     const guild = tokenData.guild;
     if (!guild) {
-      return new Response(JSON.stringify({ error: "No guild found — bot was not added" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("No guild in token response:", JSON.stringify(tokenData));
+      return new Response(
+        JSON.stringify({ ok: false, error: "No guild found — bot was not added to a server" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Save connection
