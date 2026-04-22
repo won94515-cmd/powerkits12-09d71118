@@ -177,7 +177,9 @@ export type Database = {
       }
       discord_connections: {
         Row: {
+          bot_added: boolean | null
           bot_installed: boolean | null
+          channels: Json | null
           channels_cache: Json | null
           channels_cached_at: string | null
           created_at: string
@@ -185,6 +187,7 @@ export type Database = {
           id: string
           invite_link: string | null
           is_active: boolean | null
+          last_welcomed_at: string | null
           selected_channel_name: string | null
           server_id: string | null
           server_name: string | null
@@ -194,7 +197,9 @@ export type Database = {
           welcome_message: string | null
         }
         Insert: {
+          bot_added?: boolean | null
           bot_installed?: boolean | null
+          channels?: Json | null
           channels_cache?: Json | null
           channels_cached_at?: string | null
           created_at?: string
@@ -202,6 +207,7 @@ export type Database = {
           id?: string
           invite_link?: string | null
           is_active?: boolean | null
+          last_welcomed_at?: string | null
           selected_channel_name?: string | null
           server_id?: string | null
           server_name?: string | null
@@ -211,7 +217,9 @@ export type Database = {
           welcome_message?: string | null
         }
         Update: {
+          bot_added?: boolean | null
           bot_installed?: boolean | null
+          channels?: Json | null
           channels_cache?: Json | null
           channels_cached_at?: string | null
           created_at?: string
@@ -219,6 +227,7 @@ export type Database = {
           id?: string
           invite_link?: string | null
           is_active?: boolean | null
+          last_welcomed_at?: string | null
           selected_channel_name?: string | null
           server_id?: string | null
           server_name?: string | null
