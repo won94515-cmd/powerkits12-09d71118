@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, Download, Search, Send, Plus, Loader2, Trash2, Upload } from "lucide-react";
+import { BookOpen, Download, Search, Send, Plus, Loader2, Trash2, Upload, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranding } from "@/contexts/BrandingContext";
 
 const categories = ["All", "Challenges", "Nutrition", "Business", "Marketing", "Workouts", "general"];
 const formCategories = ["Challenges", "Nutrition", "Business", "Marketing", "Workouts", "general"];
@@ -25,10 +26,12 @@ interface Ebook {
   pages_count: number | null;
   download_count: number | null;
   is_published: boolean | null;
+  ai_body?: string | null;
 }
 
 const Ebooks = () => {
   const { user } = useAuth();
+  const { brand } = useBranding();
   const fileRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -36,6 +39,9 @@ const Ebooks = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiType, setAiType] = useState<"ebook" | "pamphlet">("ebook");
   const [form, setForm] = useState({ title: "", description: "", category: "general", pages_count: 0 });
   const [file, setFile] = useState<File | null>(null);
 
