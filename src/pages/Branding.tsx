@@ -3,14 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Palette, Upload, Type, MessageSquare, Save, Loader2 } from "lucide-react";
+import { Palette, Upload, Type, MessageSquare, Save, Loader2, Power } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranding } from "@/contexts/BrandingContext";
 
 const colorPresets = [
   { name: "Ocean Blue", primary: "#0062FF", secondary: "#1B263B", accent: "#00897B" },
@@ -35,10 +36,12 @@ const voiceTones = [
 
 const Branding = () => {
   const { user } = useAuth();
+  const { reload } = useBranding();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [brandingEnabled, setBrandingEnabled] = useState(true);
   const [logoUrl, setLogoUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#0062FF");
   const [secondaryColor, setSecondaryColor] = useState("#1B263B");
@@ -63,6 +66,8 @@ const Branding = () => {
         setBodyFont(data.font_body || "Inter");
         setTagline(data.tagline || "");
         setWebsiteUrl(data.website_url || "");
+        setBrandVoice((data as any).brand_voice || "motivational");
+        setBrandingEnabled((data as any).branding_enabled ?? true);
       }
       const { data: profile } = await supabase.from("profiles").select("business_name").eq("user_id", user.id).maybeSingle();
       if (profile?.business_name) setStudioName(profile.business_name);
@@ -89,34 +94,55 @@ const Branding = () => {
     }
   };
 
+  const persist = async (overrides?: Partial<Record<string, any>>) => {
+    if (!user) return;
+    const payload: any = {
+      user_id: user.id,
+      logo_url: logoUrl || null,
+      primary_color: primaryColor,
+      secondary_color: secondaryColor,
+      accent_color: accentColor,
+      font_heading: headingFont,
+      font_body: bodyFont,
+      tagline: tagline || null,
+      website_url: websiteUrl || null,
+      brand_voice: brandVoice,
+      branding_enabled: brandingEnabled,
+      ...overrides,
+    };
+    const { data: existing } = await supabase.from("brand_settings").select("id").eq("user_id", user.id).maybeSingle();
+    const { error } = existing
+      ? await supabase.from("brand_settings").update(payload).eq("user_id", user.id)
+      : await supabase.from("brand_settings").insert(payload);
+    if (error) throw error;
+  };
+
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
     try {
-      const payload = {
-        user_id: user.id,
-        logo_url: logoUrl || null,
-        primary_color: primaryColor,
-        secondary_color: secondaryColor,
-        accent_color: accentColor,
-        font_heading: headingFont,
-        font_body: bodyFont,
-        tagline: tagline || null,
-        website_url: websiteUrl || null,
-      };
-      const { data: existing } = await supabase.from("brand_settings").select("id").eq("user_id", user.id).maybeSingle();
-      const { error } = existing
-        ? await supabase.from("brand_settings").update(payload).eq("user_id", user.id)
-        : await supabase.from("brand_settings").insert(payload);
-      if (error) throw error;
+      await persist();
       if (studioName) {
         await supabase.from("profiles").update({ business_name: studioName }).eq("user_id", user.id);
       }
-      toast.success("Brand settings saved");
+      await reload();
+      toast.success("Brand settings saved — applied across the app");
     } catch (err: any) {
       toast.error(err.message || "Save failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleEnabled = async (next: boolean) => {
+    setBrandingEnabled(next);
+    try {
+      await persist({ branding_enabled: next });
+      await reload();
+      toast.success(next ? "Branding enabled across the app" : "Branding disabled — using default theme");
+    } catch (err: any) {
+      setBrandingEnabled(!next);
+      toast.error(err.message || "Toggle failed");
     }
   };
 
@@ -135,6 +161,26 @@ const Branding = () => {
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Changes
         </Button>
       </div>
+
+      <Card className="border-border/60 shadow-sm">
+        <CardContent className="p-4 flex items-center gap-4">
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${brandingEnabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+            <Power className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-sm">Apply branding across the app</p>
+              <Badge variant={brandingEnabled ? "default" : "outline"} className="text-[10px] px-1.5">
+                {brandingEnabled ? "Active" : "Off"}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              When on, your colors, fonts, logo and voice are used everywhere — including AI-generated ebooks, posts and previews.
+            </p>
+          </div>
+          <Switch checked={brandingEnabled} onCheckedChange={handleToggleEnabled} />
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="identity" className="space-y-5">
         <TabsList className="grid w-full grid-cols-4 h-10">
@@ -285,8 +331,8 @@ const Branding = () => {
                 </div>
               </div>
               <div className="p-5 rounded-xl border border-border bg-muted/30">
-                <h3 className="text-xl font-bold mb-1.5">Preview Heading</h3>
-                <p className="text-sm text-muted-foreground">This is how your body text will look across posts, reels, and community content.</p>
+                <h3 className="text-xl font-bold mb-1.5" style={{ fontFamily: `'${headingFont}', sans-serif` }}>Preview Heading</h3>
+                <p className="text-sm text-muted-foreground" style={{ fontFamily: `'${bodyFont}', sans-serif` }}>This is how your body text will look across posts, reels, and community content.</p>
               </div>
             </CardContent>
           </Card>
@@ -296,7 +342,7 @@ const Branding = () => {
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Brand Voice</CardTitle>
-              <CardDescription className="text-xs">How should your content sound?</CardDescription>
+              <CardDescription className="text-xs">How should your AI-generated content sound?</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

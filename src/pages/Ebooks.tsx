@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, Download, Search, Send, Plus, Loader2, Trash2, Upload } from "lucide-react";
+import { BookOpen, Download, Search, Send, Plus, Loader2, Trash2, Upload, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranding } from "@/contexts/BrandingContext";
 
 const categories = ["All", "Challenges", "Nutrition", "Business", "Marketing", "Workouts", "general"];
 const formCategories = ["Challenges", "Nutrition", "Business", "Marketing", "Workouts", "general"];
@@ -25,10 +26,12 @@ interface Ebook {
   pages_count: number | null;
   download_count: number | null;
   is_published: boolean | null;
+  ai_body?: string | null;
 }
 
 const Ebooks = () => {
   const { user } = useAuth();
+  const { brand } = useBranding();
   const fileRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -36,6 +39,9 @@ const Ebooks = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiType, setAiType] = useState<"ebook" | "pamphlet">("ebook");
   const [form, setForm] = useState({ title: "", description: "", category: "general", pages_count: 0 });
   const [file, setFile] = useState<File | null>(null);
 
@@ -60,19 +66,25 @@ const Ebooks = () => {
         if (upErr) throw upErr;
         file_url = path;
       }
+      const aiBody = (window as any).__lastAiBody as string | undefined;
+      const fullDescription = aiBody
+        ? `${form.description || ""}${form.description ? "\n\n---\n\n" : ""}${aiBody}`
+        : (form.description || null);
       const { error } = await supabase.from("ebooks").insert({
         user_id: user.id,
         title: form.title,
-        description: form.description || null,
+        description: fullDescription,
         category: form.category,
         pages_count: Number(form.pages_count) || 0,
         file_url,
         is_published: true,
       });
       if (error) throw error;
+      (window as any).__lastAiBody = "";
       toast.success("Ebook added");
       setOpen(false);
       setForm({ title: "", description: "", category: "general", pages_count: 0 });
+      setAiTopic("");
       setFile(null);
       fetch();
     } catch (err: any) {
@@ -107,6 +119,41 @@ const Ebooks = () => {
     }
   };
 
+  const handleAiGenerate = async () => {
+    if (!user) return;
+    if (!aiTopic.trim()) { toast.error("Enter a topic for AI generation"); return; }
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: {
+          type: aiType,
+          topic: aiTopic.trim(),
+          category: form.category,
+          brandVoice: brand?.brand_voice || "motivational",
+          studioName: brand?.studio_name || "",
+          tagline: brand?.tagline || "",
+          brandingEnabled: brand?.branding_enabled ?? true,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const out = data as { title?: string; description?: string; body?: string; pages_count?: number };
+      setForm(f => ({
+        ...f,
+        title: out.title || f.title,
+        description: out.description || f.description,
+        pages_count: out.pages_count || f.pages_count || 8,
+      }));
+      // Stash full body in description if no separate field; we'll save as description+body via insert below.
+      (window as any).__lastAiBody = out.body || "";
+      toast.success(`AI ${aiType} drafted${brand?.branding_enabled ? " in your brand voice" : ""}`);
+    } catch (err: any) {
+      toast.error(err.message || "AI generation failed");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const filtered = ebooks.filter((e) => {
     const matchSearch = e.title.toLowerCase().includes(search.toLowerCase());
     const matchCategory = selectedCategory === "All" || e.category === selectedCategory;
@@ -124,9 +171,33 @@ const Ebooks = () => {
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-4 h-4" /> Add Ebook</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Add new ebook</DialogTitle></DialogHeader>
             <div className="space-y-3">
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold">AI draft {brand?.branding_enabled && brand?.brand_voice ? `(${brand.brand_voice} voice)` : ""}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {brand?.branding_enabled
+                    ? `Generates content in your brand voice${brand?.studio_name ? ` for ${brand.studio_name}` : ""}.`
+                    : "Branding is off — content will be generic. Enable branding to personalize."}
+                </p>
+                <div className="flex gap-2">
+                  <Select value={aiType} onValueChange={(v) => setAiType(v as "ebook" | "pamphlet")}>
+                    <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ebook">Ebook</SelectItem>
+                      <SelectItem value="pamphlet">Pamphlet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input placeholder="Topic e.g. 12-week strength challenge" value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} className="h-8 text-xs" />
+                  <Button size="sm" className="h-8 gap-1 text-xs" onClick={handleAiGenerate} disabled={generating}>
+                    {generating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Generate
+                  </Button>
+                </div>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">Title</Label>
                 <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
