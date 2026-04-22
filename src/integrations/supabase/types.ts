@@ -50,6 +50,8 @@ export type Database = {
       brand_settings: {
         Row: {
           accent_color: string | null
+          brand_voice: string | null
+          branding_enabled: boolean
           created_at: string
           font_body: string | null
           font_heading: string | null
@@ -64,6 +66,8 @@ export type Database = {
         }
         Insert: {
           accent_color?: string | null
+          brand_voice?: string | null
+          branding_enabled?: boolean
           created_at?: string
           font_body?: string | null
           font_heading?: string | null
@@ -78,6 +82,8 @@ export type Database = {
         }
         Update: {
           accent_color?: string | null
+          brand_voice?: string | null
+          branding_enabled?: boolean
           created_at?: string
           font_body?: string | null
           font_heading?: string | null
