@@ -14,6 +14,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranding } from "@/contexts/BrandingContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -34,7 +35,12 @@ const libraryItems = [
 
 const AppSidebar = () => {
   const { signOut } = useAuth();
+  const { brand } = useBranding();
   const location = useLocation();
+  const showBrand = !!brand?.branding_enabled;
+  const studioName = showBrand && brand?.studio_name ? brand.studio_name : "powerKits";
+  const tagline = showBrand && brand?.tagline ? brand.tagline : "Enterprise Retention";
+  const logo = showBrand ? brand?.logo_url : null;
 
   const renderNavItem = (item: typeof navItems[0]) => {
     const isActive = location.pathname === item.to;
@@ -59,12 +65,16 @@ const AppSidebar = () => {
     <aside className="flex flex-col h-screen w-[230px] bg-sidebar border-r border-sidebar-border sticky top-0 shrink-0">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 h-14 border-b border-sidebar-border shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <Zap className="w-[18px] h-[18px] text-primary-foreground" />
+        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 overflow-hidden">
+          {logo ? (
+            <img src={logo} alt={studioName} className="w-full h-full object-contain" />
+          ) : (
+            <Zap className="w-[18px] h-[18px] text-primary-foreground" />
+          )}
         </div>
-        <div>
-          <span className="text-[15px] font-bold tracking-tight block leading-none text-foreground">powerKits</span>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Enterprise Retention</span>
+        <div className="min-w-0">
+          <span className="text-[15px] font-bold tracking-tight block leading-none text-foreground truncate">{studioName}</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider truncate block">{tagline}</span>
         </div>
       </div>
 
