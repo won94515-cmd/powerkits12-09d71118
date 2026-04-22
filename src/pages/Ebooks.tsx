@@ -147,6 +147,8 @@ const Ebooks = () => {
       setGenerating(false);
     }
   };
+
+  const filtered = ebooks.filter((e) => {
     const matchSearch = e.title.toLowerCase().includes(search.toLowerCase());
     const matchCategory = selectedCategory === "All" || e.category === selectedCategory;
     return matchSearch && matchCategory;
