@@ -171,9 +171,33 @@ const Ebooks = () => {
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-4 h-4" /> Add Ebook</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Add new ebook</DialogTitle></DialogHeader>
             <div className="space-y-3">
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold">AI draft {brand?.branding_enabled && brand?.brand_voice ? `(${brand.brand_voice} voice)` : ""}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {brand?.branding_enabled
+                    ? `Generates content in your brand voice${brand?.studio_name ? ` for ${brand.studio_name}` : ""}.`
+                    : "Branding is off — content will be generic. Enable branding to personalize."}
+                </p>
+                <div className="flex gap-2">
+                  <Select value={aiType} onValueChange={(v) => setAiType(v as "ebook" | "pamphlet")}>
+                    <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ebook">Ebook</SelectItem>
+                      <SelectItem value="pamphlet">Pamphlet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input placeholder="Topic e.g. 12-week strength challenge" value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} className="h-8 text-xs" />
+                  <Button size="sm" className="h-8 gap-1 text-xs" onClick={handleAiGenerate} disabled={generating}>
+                    {generating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Generate
+                  </Button>
+                </div>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-sm">Title</Label>
                 <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
