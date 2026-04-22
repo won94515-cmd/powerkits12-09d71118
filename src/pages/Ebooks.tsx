@@ -66,19 +66,25 @@ const Ebooks = () => {
         if (upErr) throw upErr;
         file_url = path;
       }
+      const aiBody = (window as any).__lastAiBody as string | undefined;
+      const fullDescription = aiBody
+        ? `${form.description || ""}${form.description ? "\n\n---\n\n" : ""}${aiBody}`
+        : (form.description || null);
       const { error } = await supabase.from("ebooks").insert({
         user_id: user.id,
         title: form.title,
-        description: form.description || null,
+        description: fullDescription,
         category: form.category,
         pages_count: Number(form.pages_count) || 0,
         file_url,
         is_published: true,
       });
       if (error) throw error;
+      (window as any).__lastAiBody = "";
       toast.success("Ebook added");
       setOpen(false);
       setForm({ title: "", description: "", category: "general", pages_count: 0 });
+      setAiTopic("");
       setFile(null);
       fetch();
     } catch (err: any) {
