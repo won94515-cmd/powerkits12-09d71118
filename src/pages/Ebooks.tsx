@@ -113,7 +113,40 @@ const Ebooks = () => {
     }
   };
 
-  const filtered = ebooks.filter((e) => {
+  const handleAiGenerate = async () => {
+    if (!user) return;
+    if (!aiTopic.trim()) { toast.error("Enter a topic for AI generation"); return; }
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: {
+          type: aiType,
+          topic: aiTopic.trim(),
+          category: form.category,
+          brandVoice: brand?.brand_voice || "motivational",
+          studioName: brand?.studio_name || "",
+          tagline: brand?.tagline || "",
+          brandingEnabled: brand?.branding_enabled ?? true,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const out = data as { title?: string; description?: string; body?: string; pages_count?: number };
+      setForm(f => ({
+        ...f,
+        title: out.title || f.title,
+        description: out.description || f.description,
+        pages_count: out.pages_count || f.pages_count || 8,
+      }));
+      // Stash full body in description if no separate field; we'll save as description+body via insert below.
+      (window as any).__lastAiBody = out.body || "";
+      toast.success(`AI ${aiType} drafted${brand?.branding_enabled ? " in your brand voice" : ""}`);
+    } catch (err: any) {
+      toast.error(err.message || "AI generation failed");
+    } finally {
+      setGenerating(false);
+    }
+  };
     const matchSearch = e.title.toLowerCase().includes(search.toLowerCase());
     const matchCategory = selectedCategory === "All" || e.category === selectedCategory;
     return matchSearch && matchCategory;
