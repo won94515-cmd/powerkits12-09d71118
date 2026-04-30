@@ -44,8 +44,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const clientId = Deno.env.get("DISCORD_CLIENT_ID")!;
-    const clientSecret = Deno.env.get("DISCORD_CLIENT_SECRET")!;
+    const configuredClientId = Deno.env.get("DISCORD_CLIENT_ID")?.trim();
+    const clientId = configuredClientId || "1491132759886794952";
+    const clientSecret = Deno.env.get("DISCORD_CLIENT_SECRET")?.trim();
+
+    if (!clientSecret) {
+      return new Response(JSON.stringify({ ok: false, error: "Missing Discord client secret" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Exchange code for token
     const tokenRes = await fetch("https://discord.com/api/v10/oauth2/token", {
