@@ -44,8 +44,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const configuredClientId = Deno.env.get("DISCORD_CLIENT_ID")?.trim();
-    const clientId = configuredClientId || "1491132759886794952";
+    const clientId = "1491132759886794952";
     const clientSecret = Deno.env.get("DISCORD_CLIENT_SECRET")?.trim();
 
     if (!clientSecret) {
