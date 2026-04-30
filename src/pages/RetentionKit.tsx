@@ -393,7 +393,7 @@ const RetentionKit = () => {
           </Card>
         </TabsContent>
 
-
+        <TabsContent value="welcome" className="space-y-5">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-3">
