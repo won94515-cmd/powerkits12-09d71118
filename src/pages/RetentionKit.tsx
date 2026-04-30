@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { buildDiscordOAuthUrl } from "@/lib/discord";
+import { buildDiscordOAuthUrl, DISCORD_CLIENT_ID, DISCORD_OAUTH_SCOPES, DISCORD_BOT_PERMISSIONS } from "@/lib/discord";
 
 interface DiscordChannel { id: string; name: string; }
 interface DiscordConnection {
