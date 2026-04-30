@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { buildDiscordOAuthUrl } from "@/lib/discord";
+import { buildDiscordOAuthUrl, DISCORD_CLIENT_ID, DISCORD_OAUTH_SCOPES, DISCORD_BOT_PERMISSIONS } from "@/lib/discord";
 
 interface DiscordChannel { id: string; name: string; }
 interface DiscordConnection {
@@ -41,6 +41,37 @@ const RetentionKit = () => {
   const [selectedChannel, setSelectedChannel] = useState<string>("");
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [diagnostic, setDiagnostic] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+
+  const redirectUri = typeof window !== "undefined" ? `${window.location.origin}/discord/callback` : "";
+  const oauthUrl = redirectUri ? buildDiscordOAuthUrl(redirectUri) : "";
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("discord_oauth_diagnostic");
+      if (raw) setDiagnostic(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const clearDiagnostic = () => {
+    try { sessionStorage.removeItem("discord_oauth_diagnostic"); } catch {}
+    setDiagnostic(null);
+  };
+
+  const copyDiagnostic = async () => {
+    const payload = {
+      client_id: DISCORD_CLIENT_ID,
+      redirect_uri: redirectUri,
+      scopes: DISCORD_OAUTH_SCOPES,
+      permissions: DISCORD_BOT_PERMISSIONS,
+      oauth_url: oauthUrl,
+      last_error: diagnostic,
+    };
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   const connected = !!conn?.bot_installed && !!conn?.server_id;
 
@@ -66,8 +97,8 @@ const RetentionKit = () => {
   useEffect(() => { loadConnection(); }, [user]);
 
   const handleConnect = () => {
-    const redirectUri = `${window.location.origin}/discord/callback`;
-    window.location.href = buildDiscordOAuthUrl(redirectUri);
+    clearDiagnostic();
+    window.location.href = oauthUrl;
   };
 
   const handleRefreshChannels = async () => {
@@ -271,6 +302,95 @@ const RetentionKit = () => {
               </CardContent>
             </Card>
           </div>
+
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AlertCircle className="w-4 h-4 text-primary" /> OAuth Connection Tester
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Verify these exact values are registered in your Discord application's OAuth2 settings.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Client ID</Label>
+                  <div className="font-mono text-xs p-2 rounded bg-muted border border-border/60 break-all">
+                    {DISCORD_CLIENT_ID}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Redirect URI</Label>
+                  <div className="font-mono text-xs p-2 rounded bg-muted border border-border/60 break-all">
+                    {redirectUri}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Scopes</Label>
+                  <div className="font-mono text-xs p-2 rounded bg-muted border border-border/60 break-all">
+                    {DISCORD_OAUTH_SCOPES}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Bot Permissions</Label>
+                  <div className="font-mono text-xs p-2 rounded bg-muted border border-border/60 break-all">
+                    {DISCORD_BOT_PERMISSIONS}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Full Authorization URL</Label>
+                <div className="font-mono text-[10px] p-2 rounded bg-muted border border-border/60 break-all">
+                  {oauthUrl}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => window.open(oauthUrl, "_blank")}>
+                  Test Authorization in New Tab
+                </Button>
+                <Button size="sm" variant="outline" onClick={copyDiagnostic}>
+                  {copied ? "Copied!" : "Copy Diagnostic JSON"}
+                </Button>
+                {diagnostic && (
+                  <Button size="sm" variant="ghost" onClick={clearDiagnostic}>
+                    Clear Last Error
+                  </Button>
+                )}
+              </div>
+
+              {diagnostic ? (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                    <AlertCircle className="w-4 h-4" /> Last Authorization Error
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-muted-foreground">Stage:</span> <span className="font-mono">{diagnostic.stage || "—"}</span></div>
+                    <div><span className="text-muted-foreground">When:</span> <span className="font-mono">{diagnostic.at || "—"}</span></div>
+                    <div className="sm:col-span-2"><span className="text-muted-foreground">Error:</span> <span className="font-mono break-all">{diagnostic.error || "—"}</span></div>
+                    {diagnostic.error_description && (
+                      <div className="sm:col-span-2"><span className="text-muted-foreground">Description:</span> <span className="font-mono break-all">{diagnostic.error_description}</span></div>
+                    )}
+                    {diagnostic.status !== undefined && (
+                      <div><span className="text-muted-foreground">HTTP Status:</span> <span className="font-mono">{diagnostic.status}</span></div>
+                    )}
+                    <div className="sm:col-span-2"><span className="text-muted-foreground">Redirect URI used:</span> <span className="font-mono break-all">{diagnostic.redirect_uri || "—"}</span></div>
+                  </div>
+                  {diagnostic.details && (
+                    <pre className="text-[10px] p-2 rounded bg-background border border-border/60 overflow-auto max-h-40">
+{JSON.stringify(diagnostic.details, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 p-2.5 rounded-lg text-xs bg-muted text-muted-foreground">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> No recent OAuth errors recorded.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="welcome" className="space-y-5">
