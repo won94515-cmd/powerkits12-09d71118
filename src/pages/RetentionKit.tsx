@@ -41,6 +41,37 @@ const RetentionKit = () => {
   const [selectedChannel, setSelectedChannel] = useState<string>("");
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [diagnostic, setDiagnostic] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+
+  const redirectUri = typeof window !== "undefined" ? `${window.location.origin}/discord/callback` : "";
+  const oauthUrl = redirectUri ? buildDiscordOAuthUrl(redirectUri) : "";
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("discord_oauth_diagnostic");
+      if (raw) setDiagnostic(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const clearDiagnostic = () => {
+    try { sessionStorage.removeItem("discord_oauth_diagnostic"); } catch {}
+    setDiagnostic(null);
+  };
+
+  const copyDiagnostic = async () => {
+    const payload = {
+      client_id: DISCORD_CLIENT_ID,
+      redirect_uri: redirectUri,
+      scopes: DISCORD_OAUTH_SCOPES,
+      permissions: DISCORD_BOT_PERMISSIONS,
+      oauth_url: oauthUrl,
+      last_error: diagnostic,
+    };
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   const connected = !!conn?.bot_installed && !!conn?.server_id;
 
