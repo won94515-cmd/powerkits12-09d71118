@@ -17,19 +17,30 @@ const DiscordCallback = () => {
 
     const code = params.get("code");
     const error = params.get("error");
+    const error_description = params.get("error_description");
+    const redirect_uri = `${window.location.origin}/discord/callback`;
+
+    const saveDiag = (diag: any) => {
+      try {
+        sessionStorage.setItem(
+          "discord_oauth_diagnostic",
+          JSON.stringify({ ...diag, at: new Date().toISOString(), redirect_uri }),
+        );
+      } catch {}
+    };
 
     if (error) {
       setStatus("error");
       setMessage(`Discord authorization failed: ${error}`);
+      saveDiag({ stage: "discord_redirect", error, error_description });
       return;
     }
     if (!code) {
       setStatus("error");
       setMessage("Missing authorization code.");
+      saveDiag({ stage: "discord_redirect", error: "missing_code" });
       return;
     }
-
-    const redirect_uri = `${window.location.origin}/discord/callback`;
 
     (async () => {
       const { data, error: invokeErr } = await supabase.functions.invoke("discord-oauth-callback", {
@@ -46,8 +57,15 @@ const DiscordCallback = () => {
           "Failed to connect.";
         setMessage(detailMsg);
         console.error("Discord OAuth error:", { invokeErr, payload });
+        saveDiag({
+          stage: "token_exchange",
+          error: payload?.error || invokeErr?.message,
+          details: payload?.details,
+          status: payload?.status,
+        });
         return;
       }
+      try { sessionStorage.removeItem("discord_oauth_diagnostic"); } catch {}
       setStatus("success");
       setMessage(`Connected to ${payload?.guild?.name ?? "your server"}!`);
       setTimeout(() => navigate("/retention-kit"), 1500);
