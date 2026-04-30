@@ -97,8 +97,8 @@ const RetentionKit = () => {
   useEffect(() => { loadConnection(); }, [user]);
 
   const handleConnect = () => {
-    const redirectUri = `${window.location.origin}/discord/callback`;
-    window.location.href = buildDiscordOAuthUrl(redirectUri);
+    clearDiagnostic();
+    window.location.href = oauthUrl;
   };
 
   const handleRefreshChannels = async () => {
