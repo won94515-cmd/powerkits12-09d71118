@@ -32,22 +32,6 @@ const DiscordCallback = () => {
     const redirect_uri = `${window.location.origin}/discord/callback`;
 
     (async () => {
-      // Wait for Supabase auth session to be restored from storage before invoking.
-      // Without this, the function call goes out without a JWT and returns 401.
-      let { data: sessionData } = await supabase.auth.getSession();
-      let session = sessionData.session;
-      if (!session) {
-        // Give storage hydration a brief window, then re-check once.
-        await new Promise((r) => setTimeout(r, 400));
-        const retry = await supabase.auth.getSession();
-        session = retry.data.session;
-      }
-      if (!session) {
-        setStatus("error");
-        setMessage("You need to be signed in to connect Discord. Please log in and try again.");
-        return;
-      }
-
       const { data, error: invokeErr } = await supabase.functions.invoke("discord-oauth-callback", {
         body: { code, redirect_uri },
       });
