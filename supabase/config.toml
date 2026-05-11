@@ -6,9 +6,6 @@ verify_jwt = true
 [functions.seo-suggest]
 verify_jwt = true
 
-[functions.discord-oauth-start]
-verify_jwt = true
-
 [functions.discord-oauth-callback]
 verify_jwt = true
 
