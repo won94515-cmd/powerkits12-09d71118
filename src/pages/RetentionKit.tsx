@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { buildDiscordOAuthUrl } from "@/lib/discord";
+
 
 interface DiscordChannel { id: string; name: string; }
 interface DiscordConnection {
@@ -65,9 +65,23 @@ const RetentionKit = () => {
 
   useEffect(() => { loadConnection(); }, [user]);
 
-  const handleConnect = () => {
-    const redirectUri = `${window.location.origin}/discord/callback`;
-    window.location.href = buildDiscordOAuthUrl(redirectUri);
+  const handleConnect = async () => {
+    const redirect_uri = `${window.location.origin}/discord/callback`;
+    const { data, error } = await supabase.functions.invoke("discord-oauth-start", {
+      body: { redirect_uri },
+    });
+    if (error || (data as any)?.error || !(data as any)?.url) {
+      toast.error((data as any)?.error || error?.message || "Failed to start Discord connection");
+      return;
+    }
+    window.location.href = (data as any).url;
+  };
+
+  const handleSwitchServer = async () => {
+    const { error } = await supabase.functions.invoke("discord-disconnect");
+    if (error) { toast.error(error.message); return; }
+    setConn(null); setChannels([]); setSelectedChannel("");
+    await handleConnect();
   };
 
   const handleRefreshChannels = async () => {
@@ -204,9 +218,14 @@ const RetentionKit = () => {
                         <div className="text-sm font-semibold">{conn?.server_name}</div>
                         <div className="text-xs text-success">Bot installed & connected</div>
                       </div>
-                      <Button size="sm" variant="ghost" onClick={handleDisconnect} className="gap-1.5">
-                        <LogOut className="w-3.5 h-3.5" /> Disconnect
-                      </Button>
+                      <div className="flex flex-col gap-1.5">
+                        <Button size="sm" variant="outline" onClick={handleSwitchServer} className="gap-1.5 h-7 text-xs">
+                          Connect different server
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={handleDisconnect} className="gap-1.5 h-7 text-xs">
+                          <LogOut className="w-3 h-3" /> Disconnect
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">
