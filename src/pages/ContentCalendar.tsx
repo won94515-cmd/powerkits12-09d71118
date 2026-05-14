@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChevronLeft, ChevronRight, Plus, Image, Video,
-  Trophy, Sparkles, Clock, Filter, Loader2, Trash2,
+  Trophy, Sparkles, Clock, Filter, Loader2, Trash2, Mail,
 } from "lucide-react";
 import { toast } from "sonner";
+import { EmailComposer } from "@/components/EmailComposer";
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
