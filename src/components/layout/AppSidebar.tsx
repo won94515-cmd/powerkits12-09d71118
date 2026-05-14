@@ -39,6 +39,7 @@ const AppSidebar = () => {
   const { signOut } = useAuth();
   const { brand } = useBranding();
   const location = useLocation();
+  const navigate = useNavigate();
   const showBrand = !!brand?.branding_enabled;
   const studioName = showBrand && brand?.studio_name ? brand.studio_name : "powerKits";
   const tagline = showBrand && brand?.tagline ? brand.tagline : "Enterprise Retention";
