@@ -358,6 +358,7 @@ const ContentCalendar = () => {
                     <SelectItem value="facebook">Facebook</SelectItem>
                     <SelectItem value="tiktok">TikTok</SelectItem>
                     <SelectItem value="discord">Discord</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
