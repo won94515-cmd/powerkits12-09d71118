@@ -98,7 +98,7 @@ const AppSidebar = () => {
       <div className="px-3 pb-4 space-y-1.5 shrink-0">
         <Button
           className="w-full gap-2 text-xs h-9 rounded-lg"
-          onClick={() => {}}
+          onClick={() => navigate("/campaigns")}
         >
           <Plus className="w-4 h-4" /> New Campaign
         </Button>
