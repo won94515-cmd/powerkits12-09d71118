@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/content-calendar", icon: Calendar, label: "Content Library" },
+  { to: "/campaigns", icon: Mail, label: "Campaigns" },
   { to: "/retention-kit", icon: Shield, label: "Social Planner" },
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
 ];
