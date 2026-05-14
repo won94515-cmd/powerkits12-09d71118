@@ -366,6 +366,14 @@ const ContentCalendar = () => {
               {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               {editing.title ? "Improve with AI" : "Generate with AI"}
             </Button>
+            {editing.platform === "email" && (
+              <Button variant="outline" className="w-full gap-2" onClick={() => {
+                setEditorOpen(false);
+                openEmailComposer(editing as ContentItem);
+              }}>
+                <Mail className="w-4 h-4" /> Send as email now
+              </Button>
+            )}
           </div>
           <DialogFooter className="flex sm:justify-between">
             <div>
@@ -384,6 +392,14 @@ const ContentCalendar = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EmailComposer
+        open={emailOpen}
+        onOpenChange={setEmailOpen}
+        defaultSubject={emailDefaults.subject}
+        defaultBody={emailDefaults.body}
+        contentItemId={emailDefaults.contentItemId}
+      />
     </div>
   );
 };
