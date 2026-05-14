@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Palette,
@@ -12,6 +12,7 @@ import {
   Settings,
   Zap,
   Plus,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/content-calendar", icon: Calendar, label: "Content Library" },
+  { to: "/campaigns", icon: Mail, label: "Campaigns" },
   { to: "/retention-kit", icon: Shield, label: "Social Planner" },
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
 ];
@@ -37,6 +39,7 @@ const AppSidebar = () => {
   const { signOut } = useAuth();
   const { brand } = useBranding();
   const location = useLocation();
+  const navigate = useNavigate();
   const showBrand = !!brand?.branding_enabled;
   const studioName = showBrand && brand?.studio_name ? brand.studio_name : "powerKits";
   const tagline = showBrand && brand?.tagline ? brand.tagline : "Enterprise Retention";
@@ -95,7 +98,7 @@ const AppSidebar = () => {
       <div className="px-3 pb-4 space-y-1.5 shrink-0">
         <Button
           className="w-full gap-2 text-xs h-9 rounded-lg"
-          onClick={() => {}}
+          onClick={() => navigate("/campaigns")}
         >
           <Plus className="w-4 h-4" /> New Campaign
         </Button>

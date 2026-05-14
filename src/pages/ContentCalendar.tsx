@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ChevronLeft, ChevronRight, Plus, Image, Video,
-  Trophy, Sparkles, Clock, Filter, Loader2, Trash2,
+  Trophy, Sparkles, Clock, Filter, Loader2, Trash2, Mail,
 } from "lucide-react";
 import { toast } from "sonner";
+import { EmailComposer } from "@/components/EmailComposer";
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -52,6 +53,17 @@ const ContentCalendar = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Partial<ContentItem> & { day?: number; time?: string }>({});
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailDefaults, setEmailDefaults] = useState<{ subject: string; body: string; contentItemId?: string }>({ subject: "", body: "" });
+
+  const openEmailComposer = (item?: ContentItem) => {
+    setEmailDefaults({
+      subject: item?.title ?? "",
+      body: item?.body ?? "",
+      contentItemId: item?.id,
+    });
+    setEmailOpen(true);
+  };
 
   const getWeekDate = (dayIndex: number) => {
     const today = new Date();
@@ -253,7 +265,10 @@ const ContentCalendar = () => {
         })}
       </div>
 
-      <div className="flex gap-2 justify-end">
+      <div className="flex gap-2 justify-end flex-wrap">
+        <Button variant="outline" className="gap-2 text-sm" onClick={() => openEmailComposer()}>
+          <Mail className="w-4 h-4" /> Email Marketing
+        </Button>
         <Button variant="outline" className="gap-2 text-sm" onClick={aiQuickGenerate} disabled={aiLoading}>
           {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} AI Generate
         </Button>
@@ -343,6 +358,7 @@ const ContentCalendar = () => {
                     <SelectItem value="facebook">Facebook</SelectItem>
                     <SelectItem value="tiktok">TikTok</SelectItem>
                     <SelectItem value="discord">Discord</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -351,6 +367,14 @@ const ContentCalendar = () => {
               {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               {editing.title ? "Improve with AI" : "Generate with AI"}
             </Button>
+            {editing.platform === "email" && (
+              <Button variant="outline" className="w-full gap-2" onClick={() => {
+                setEditorOpen(false);
+                openEmailComposer(editing as ContentItem);
+              }}>
+                <Mail className="w-4 h-4" /> Send as email now
+              </Button>
+            )}
           </div>
           <DialogFooter className="flex sm:justify-between">
             <div>
@@ -369,6 +393,14 @@ const ContentCalendar = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EmailComposer
+        open={emailOpen}
+        onOpenChange={setEmailOpen}
+        defaultSubject={emailDefaults.subject}
+        defaultBody={emailDefaults.body}
+        contentItemId={emailDefaults.contentItemId}
+      />
     </div>
   );
 };

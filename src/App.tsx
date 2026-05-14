@@ -21,6 +21,8 @@ import Analytics from "@/pages/Analytics";
 import Help from "@/pages/Help";
 import NotFound from "@/pages/NotFound";
 import DiscordCallback from "@/pages/DiscordCallback";
+import GmailCallback from "@/pages/GmailCallback";
+import Campaigns from "@/pages/Campaigns";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/discord/callback" element={<DiscordCallback />} />
+            <Route path="/gmail/callback" element={<GmailCallback />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route
               element={
@@ -48,6 +51,7 @@ const App = () => (
               <Route path="/branding" element={<Branding />} />
               <Route path="/plans" element={<Plans />} />
               <Route path="/retention-kit" element={<RetentionKit />} />
+              <Route path="/campaigns" element={<Campaigns />} />
               <Route path="/content-calendar" element={<ContentCalendar />} />
               <Route path="/seo" element={<SEO />} />
               <Route path="/ebooks" element={<Ebooks />} />
