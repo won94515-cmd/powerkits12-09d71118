@@ -21,6 +21,8 @@ import Analytics from "@/pages/Analytics";
 import Help from "@/pages/Help";
 import NotFound from "@/pages/NotFound";
 import DiscordCallback from "@/pages/DiscordCallback";
+import GmailCallback from "@/pages/GmailCallback";
+import Campaigns from "@/pages/Campaigns";
 
 const queryClient = new QueryClient();
 
