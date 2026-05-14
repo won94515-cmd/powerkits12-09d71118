@@ -265,7 +265,10 @@ const ContentCalendar = () => {
         })}
       </div>
 
-      <div className="flex gap-2 justify-end">
+      <div className="flex gap-2 justify-end flex-wrap">
+        <Button variant="outline" className="gap-2 text-sm" onClick={() => openEmailComposer()}>
+          <Mail className="w-4 h-4" /> Email Marketing
+        </Button>
         <Button variant="outline" className="gap-2 text-sm" onClick={aiQuickGenerate} disabled={aiLoading}>
           {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} AI Generate
         </Button>
