@@ -289,6 +289,99 @@ export type Database = {
         }
         Relationships: []
       }
+      email_send_logs: {
+        Row: {
+          bcc_emails: string[] | null
+          body_preview: string | null
+          cc_emails: string[] | null
+          content_item_id: string | null
+          created_at: string
+          error_message: string | null
+          from_email: string
+          gmail_message_id: string | null
+          id: string
+          is_html: boolean
+          status: string
+          subject: string
+          to_emails: string[]
+          user_id: string
+        }
+        Insert: {
+          bcc_emails?: string[] | null
+          body_preview?: string | null
+          cc_emails?: string[] | null
+          content_item_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          from_email: string
+          gmail_message_id?: string | null
+          id?: string
+          is_html?: boolean
+          status?: string
+          subject: string
+          to_emails: string[]
+          user_id: string
+        }
+        Update: {
+          bcc_emails?: string[] | null
+          body_preview?: string | null
+          cc_emails?: string[] | null
+          content_item_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          from_email?: string
+          gmail_message_id?: string | null
+          id?: string
+          is_html?: boolean
+          status?: string
+          subject?: string
+          to_emails?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gmail_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          last_error: string | null
+          refresh_token: string
+          scope: string | null
+          token_expires_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          refresh_token: string
+          scope?: string | null
+          token_expires_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          refresh_token?: string
+          scope?: string | null
+          token_expires_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       media_assets: {
         Row: {
           alt_text: string | null
