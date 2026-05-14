@@ -38,6 +38,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/discord/callback" element={<DiscordCallback />} />
+            <Route path="/gmail/callback" element={<GmailCallback />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route
               element={
