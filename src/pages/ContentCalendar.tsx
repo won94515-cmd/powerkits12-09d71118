@@ -53,6 +53,17 @@ const ContentCalendar = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Partial<ContentItem> & { day?: number; time?: string }>({});
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailDefaults, setEmailDefaults] = useState<{ subject: string; body: string; contentItemId?: string }>({ subject: "", body: "" });
+
+  const openEmailComposer = (item?: ContentItem) => {
+    setEmailDefaults({
+      subject: item?.title ?? "",
+      body: item?.body ?? "",
+      contentItemId: item?.id,
+    });
+    setEmailOpen(true);
+  };
 
   const getWeekDate = (dayIndex: number) => {
     const today = new Date();
